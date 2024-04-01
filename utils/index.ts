@@ -25,9 +25,12 @@ export type CheckType = 'read' | 'insert' | 'update' | 'delete'
 
 export async function getDatabaseSchema(supabaseURL: string, supabaseKey: string): Promise<{ data?: DatabaseTable[], error?: string }> {
   const result: DatabaseTable[] = []
-  const res = await fetch(`${supabaseURL}/rest/v1/?apikey=${supabaseKey}`)
-  if (!res.ok) return { error: `Error fetching tables: ${res.status} ${res.statusText}` }
   try {
+    const res = await fetch(`${supabaseURL}/rest/v1/?apikey=${supabaseKey}`)
+    if (!res.ok) {
+      const e = await res.json()
+      return { error: e.message }
+    }
     const data = await res.json()
     Object.keys(data.definitions).forEach((k) => {
       const propertyKeys = Object.keys(data.definitions[k].properties)
@@ -51,6 +54,6 @@ export async function getDatabaseSchema(supabaseURL: string, supabaseKey: string
     })
     return { data: result }
   } catch {
-    return { error: 'Error parsing JSON' }
+    return { error: 'Error fetching schema.' }
   }
 }

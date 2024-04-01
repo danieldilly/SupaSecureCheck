@@ -2,8 +2,8 @@
 import { SupabaseClient, createClient } from '@supabase/supabase-js'
 
 // User Inputs
-const supaUrl: Ref<string | null> = ref('https://rbwlyfckkrurhpmmrlvq.supabase.co/')
-const supaKey: Ref<string | null> = ref('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJid2x5ZmNra3J1cmhwbW1ybHZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzM0NDI2ODUsImV4cCI6MTk4OTAxODY4NX0.K-4_vzG_raKvY6LT8PRxFFnZDdZdmayCSU02XRB3B6g')
+const supaUrl: Ref<string | null> = ref(null)
+const supaKey: Ref<string | null> = ref(null)
 
 // Server Check
 let supabase: SupabaseClient | null = null
@@ -30,6 +30,12 @@ function resetCheckStatus() {
 
 async function doSupaCheck() {
   if (isCheckInProgress.value || !supaUrl.value || !supaKey.value) return
+  // validate URL
+  const urlRegex = new RegExp('https://[a-zA-Z0-9-]+.supabase.co')
+  if (!urlRegex.test(supaUrl.value)) {
+    errorMessage.value = 'Invalid Supabase URL'
+    return
+  }
   activeSupaUrl.value = supaUrl.value.replace(/\/$/, '')
   activeSupaKey.value = supaKey.value
   supabase = createClient(activeSupaUrl.value, activeSupaKey.value)
@@ -37,6 +43,8 @@ async function doSupaCheck() {
   isCheckInProgress.value = true
   isRetrievingSchema.value = true
   const { data, error } = await getDatabaseSchema(activeSupaUrl.value, activeSupaKey.value)
+  console.log('error is', error)
+  console.log('data is', data)
   isRetrievingSchema.value = false
   if (data) {
     tableNames.value = data
@@ -48,9 +56,10 @@ async function doSupaCheck() {
     isCheckComplete.value = true
   }
   else {
-    isCurrentlyChecking.value = null
-    isSchemaAccessBlocked.value = true
+    isCheckInProgress.value = false
     isCheckComplete.value = true
+    if (error === 'OpenAPI mode disabled' || error === 'Invalid API key') isSchemaAccessBlocked.value = true
+    else { isCheckComplete.value = false }
     errorMessage.value = error || 'Error fetching tables'
   }
 }
@@ -123,13 +132,17 @@ async function check(tn: DatabaseTable, action: CheckType) {
       <div style="max-width: 540px; margin: 0 auto 32px auto;">
         <q-form ref="updateProfileForm" greedy @submit="doSupaCheck" class="text-center"
           style="max-width: 400px; margin: 0 auto;">
-          <q-input v-model="supaUrl" label="Supabase URL" filled dark
+          <q-input v-model="supaUrl" label="Supabase URL" filled dark hide-bottom-space class="q-mb-md"
             :rules="[(val: string | null) => val && val.length > 0 || 'Required']" lazy-rules="ondemand" />
-          <q-input v-model="supaKey" label="Supabase Anon Key" filled dark
+          <q-input v-model="supaKey" label="Supabase Anon Key" filled dark hide-bottom-space class="q-mb-md"
             :rules="[(val: string | null) => val && val.length > 0 || 'Required']" lazy-rules="ondemand" />
 
           <q-btn label="Check" type="submit" color="primary" unelevated rounded class="full-width"
             :disable="isCheckInProgress" />
+
+            <div v-if="errorMessage" class="q-mt-md text-caption text-negative">
+              {{ errorMessage }}
+            </div>
         </q-form>
       </div>
       <Instructions />
