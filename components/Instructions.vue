@@ -9,7 +9,7 @@
           <li>Attempt to insert to each table</li>
           <li>Attempt to update a record that was inserted</li>
           <li>Attempt to delete a record that was inserted</li>
-          <li>Display an icon indicating that result of each operation</li>
+          <li>Display an icon indicating the result of each operation</li>
         </ul>
       </div>
     </q-card-section>
